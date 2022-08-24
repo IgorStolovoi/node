@@ -5,32 +5,25 @@ const { StatusCodes } = require("http-status-codes")
 const { BadRequestError, UnauthenticatedError } = require('../errors')
 
 const authMiddleWare = async function (req, res, next) {
-    const token = req.headers.authorization.split(' ')
-    console.log(token)
-    if (!token[1] || token[0] !== 'Baerer') {
+    const auth = req.headers.authorization
+    if (!auth || !auth.startsWith('Baerer ')) {
         throw new UnauthenticatedError('provide token')
     }
-    const { email, password } = req.body;
-    if (!email || !password) {
-        throw new BadRequestError('provide credentials')
+    const token = auth.split(' ')[1]
+    if (!token) {
+        throw new UnauthenticatedError('provide token')
     }
-    const user = await User.findOne({ email })
-    if (!user) {
-        throw new UnauthenticatedError("proive valid credentials")
+    try {
+        const verifyJwt = await jwt.verify(token, process.env.JWT_SECRET)
+        req.user = {
+            name: verifyJwt.name,
+            id: verifyJwt.userId
+        }
+        next()
     }
-    const pass = await user.comparePass(password)
-    if (!pass) {
-        throw new UnauthenticatedError("proive valid credentials")
-    }
-    const verifyJwt = jwt.verify(token[1], process.env.JWT_SECRET)
-    if (!verifyJwt) {
+    catch (err) {
         throw new UnauthenticatedError('unverified token')
     }
-    req.user = {
-        name: user.name,
-        id: user._id
-    }
-    next()
 }
 
 module.exports = authMiddleWare
