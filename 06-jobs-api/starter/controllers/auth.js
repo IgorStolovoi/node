@@ -1,19 +1,19 @@
 const User = require("../models/User")
 const { StatusCodes } = require("http-status-codes")
-const bcrypt = require('bcryptjs')
 
-const { BadRequestError } = require('../errors')
+const { BadRequestError, UnauthenticatedError } = require('../errors')
 const register = async (req, res) => {
     const { name, password, email } = req.body
     if (!name || !password || !email) {
         throw new BadRequestError('provide values')
     }
-
-    res.status(StatusCodes.CREATED).send('register user')
+    const user = await User.create({ ...req.body })
+    const token = user.getToken()
+    res.status(StatusCodes.CREATED).send({ user, token })
 }
 
 const login = async (req, res) => {
-    res.send('login user')
+    res.status(StatusCodes.OK).json({ user: req.user })
 }
 
 module.exports = {
